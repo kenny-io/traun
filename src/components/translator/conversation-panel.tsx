@@ -108,6 +108,19 @@ export function ConversationPanel({
     [partnerLanguageCode],
   );
 
+  const stopAllAudio = useCallback(() => {
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    if (lastUtteranceRef.current) {
+      lastUtteranceRef.current.onend = null;
+      lastUtteranceRef.current = null;
+    }
+    setListeningFor("idle");
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const ctor =
@@ -121,19 +134,6 @@ export function ConversationPanel({
       stopAllAudio();
     };
   }, [stopAllAudio]);
-
-  const stopAllAudio = useCallback(() => {
-    recognitionRef.current?.stop();
-    recognitionRef.current = null;
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-    if (lastUtteranceRef.current) {
-      lastUtteranceRef.current.onend = null;
-      lastUtteranceRef.current = null;
-    }
-    setListeningFor("idle");
-  }, []);
 
   const createRecognition = useCallback((locale: string) => {
     if (typeof window === "undefined") return null;
@@ -283,14 +283,20 @@ export function ConversationPanel({
       };
 
       recognition.onerror = (event) => {
-        console.error(event);
+        console.error("Speech recognition error:", event.error, event);
         recognition.stop();
         setListeningFor("idle");
-        setErrorMessage(
-          event.error === "not-allowed"
-            ? "Microphone access was blocked."
-            : "Speech recognition failed.",
-        );
+        
+        if (event.error === "not-allowed") {
+          setErrorMessage("Microphone access was blocked. Please allow permission.");
+        } else if (event.error === "no-speech") {
+          setErrorMessage("No speech was detected. Please try again.");
+        } else if (event.error === "network") {
+          setErrorMessage("Network error. Please check your internet connection.");
+        } else {
+          setErrorMessage(`Speech recognition failed (${event.error}).`);
+        }
+        
         setStatusMessage("Tap speak to try again.");
       };
 

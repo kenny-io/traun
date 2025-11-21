@@ -1,4 +1,4 @@
-import translate from "@vitalets/google-translate-api";
+import { translate } from "@vitalets/google-translate-api";
 
 interface TranslateTextInput {
   text: string;
@@ -19,11 +19,10 @@ export async function translateText({
   const response = await translate(text, {
     from: sourceLanguage,
     to: targetLanguage,
-    autoCorrect: true,
   });
 
   return {
     translatedText: response.text,
-    detectedLanguage: response.from.language.iso,
+    detectedLanguage: response.raw.src,
   };
 }
